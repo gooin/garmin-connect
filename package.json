@@ -11,7 +11,7 @@
         "build:watch-windows": "npm run build:windows -- --watch",
         "prettier:all": "prettier --write .",
         "pretty": "pretty-quick --staged",
-        "prepack": "npm run build"
+        "prepack": "npm run build:windows"
     },
     "repository": {
         "type": "git",
