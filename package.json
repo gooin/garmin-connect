@@ -1,5 +1,5 @@
 {
-    "name": "garmin-connect",
+    "name": "@gooin/garmin-connect",
     "version": "1.6.1-rc.1",
     "description": "Makes it simple to interface with Garmin Connect to get or set any data point",
     "main": "./dist/index.js",
