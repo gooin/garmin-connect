@@ -1,6 +1,6 @@
 {
     "name": "@gooin/garmin-connect",
-    "version": "1.6.1",
+    "version": "1.6.2-rc.1",
     "description": "Makes it simple to interface with Garmin Connect to get or set any data point",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -55,14 +55,12 @@
     "dependencies": {
         "app-root-path": "^3.1.0",
         "axios": "^1.5.1",
-        "cloudscraper": "^4.6.0",
         "crypto": "^1.0.1",
         "form-data": "^4.0.0",
         "lodash": "^4.17.21",
         "luxon": "^3.4.3",
         "oauth-1.0a": "^2.2.6",
-        "qs": "^6.11.2",
-        "request": "^2.88.2"
+        "qs": "^6.11.2"
     },
     "pre-commit": "pretty"
 }
