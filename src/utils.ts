@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'node:fs';
 
 export const checkIsDirectory = (filePath: string): boolean => {
     return fs.existsSync(filePath) && fs.lstatSync(filePath).isDirectory();
