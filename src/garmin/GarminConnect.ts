@@ -271,6 +271,10 @@ export default class GarminConnect {
                 );
             }
         }
+        if (!(workout as IWorkoutDetail).workoutSegments)
+            throw new Error(
+                'Missing workoutSegments, please use WorkoutDetail, not Workout.'
+            );
 
         const newWorkout = _.omit(workout, [
             'workoutId',
