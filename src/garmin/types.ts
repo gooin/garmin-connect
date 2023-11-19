@@ -759,6 +759,24 @@ export interface IWorkout {
 export interface IWorkoutDetail extends IWorkout {
     workoutSegments: IWorkoutSegment[];
 }
+
+export interface IScheduleWorkout {
+    workoutScheduleId: number;
+    workout: IWorkoutDetail;
+    calendarDate: string;
+    createdDate: string;
+    ownerId: number;
+    newName: any;
+    consumer: any;
+    atpPlanTypeId: any;
+    associatedActivityId: any;
+    priority: any;
+    associatedActivityDateTime: any;
+    itp: boolean;
+    race: boolean;
+    protected: boolean;
+    nameChanged: boolean;
+}
 export interface IAuthor {
     userProfilePk: null;
     displayName: null;
@@ -858,4 +876,93 @@ export interface IDailyStepsType {
     stepGoal: number;
     totalDistance: number;
     totalSteps: number;
+}
+
+// Calendar
+export interface ICalendar {
+    startDayOfMonth: number;
+    numOfDaysInMonth: number;
+    numOfDaysInPrevMonth: number;
+    month: number;
+    year: number;
+    calendarItems: ICalendarItem[];
+}
+
+export interface ICalendarItem {
+    id?: number;
+    groupId: any;
+    trainingPlanId?: number;
+    itemType: string;
+    activityTypeId?: number;
+    wellnessActivityUuid?: string;
+    title?: string;
+    date: string;
+    duration?: number;
+    distance?: number;
+    calories?: number;
+    floorsClimbed: any;
+    avgRespirationRate?: number;
+    unitOfPoolLength: any;
+    weight?: number;
+    difference?: number;
+    courseId: any;
+    courseName: any;
+    sportTypeKey?: string;
+    url: any;
+    isStart: any;
+    isRace?: boolean;
+    recurrenceId: any;
+    isParent?: boolean;
+    parentId: any;
+    userBadgeId: any;
+    badgeCategoryTypeId: any;
+    badgeCategoryTypeDesc: any;
+    badgeAwardedDate: any;
+    badgeViewed: any;
+    hideBadge: any;
+    startTimestampLocal?: string;
+    eventTimeLocal?: EventTimeLocal;
+    diveNumber: any;
+    maxDepth: any;
+    avgDepth: any;
+    surfaceInterval: any;
+    elapsedDuration?: number;
+    lapCount?: number;
+    bottomTime: any;
+    atpPlanId: any;
+    workoutId?: number;
+    protectedWorkoutSchedule: boolean;
+    activeSets?: number;
+    strokes: any;
+    noOfSplits?: number;
+    maxGradeValue: any;
+    totalAscent?: number;
+    differenceStress: any;
+    climbDuration?: number;
+    maxSpeed?: number;
+    averageHR?: number;
+    activeSplitSummaryDuration?: number;
+    maxSplitDistance?: number;
+    maxSplitSpeed?: number;
+    location?: string;
+    shareableEventUuid?: string;
+    splitSummaryMode: any;
+    completionTarget?: CompletionTarget;
+    shareableEvent: boolean;
+    primaryEvent?: boolean;
+    phasedTrainingPlan?: boolean;
+    subscribed?: boolean;
+    autoCalcCalories?: boolean;
+    decoDive?: boolean;
+}
+
+export interface EventTimeLocal {
+    startTimeHhMm: string;
+    timeZoneId: string;
+}
+
+export interface CompletionTarget {
+    value: number;
+    unit: string;
+    unitType: string;
 }

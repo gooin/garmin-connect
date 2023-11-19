@@ -14,11 +14,13 @@ import {
     GCUserHash,
     GarminDomain,
     IActivity,
+    ICalendar,
     ICountActivities,
     IDailyStepsType,
     IGarminTokens,
     IOauth1Token,
     IOauth2Token,
+    IScheduleWorkout,
     ISocialProfile,
     IUserSettings,
     IWorkout,
@@ -305,6 +307,28 @@ export default class GarminConnect {
     async deleteWorkout(workout: { workoutId: string }) {
         if (!workout.workoutId) throw new Error('Missing workout');
         return this.client.delete(this.url.WORKOUT(workout.workoutId));
+    }
+
+    async scheduleWorkout(
+        workout: { workoutId: string },
+        date = new Date()
+    ): Promise<IScheduleWorkout> {
+        if (!workout.workoutId) throw new Error('Missing workoutId');
+        const formatedDate = DateTime.fromJSDate(date).toFormat('yyyy-MM-dd');
+        return this.client.post<IScheduleWorkout>(
+            `${this.url.SCHEDULE_WORKOUTS}${workout.workoutId}`,
+            {
+                date: formatedDate
+            }
+        );
+    }
+
+    // Garmin use month 0-11, not real month.
+    async getCalendar(
+        year = new Date().getFullYear(),
+        month = new Date().getMonth()
+    ): Promise<ICalendar> {
+        return this.client.get<ICalendar>(this.url.CALENDAR(year, month));
     }
 
     async getSteps(date = new Date()): Promise<number> {
