@@ -16,7 +16,7 @@ import {
     IOauth1Token,
     IOauth2Token
 } from '../garmin/types';
-const crypto = require('crypto');
+import crypto from 'node:crypto';
 
 const CSRF_RE = new RegExp('name="_csrf"\\s+value="(.+?)"');
 const TICKET_RE = new RegExp('ticket=([^"]+)"');
@@ -75,9 +75,9 @@ export class HttpClient {
 
                     originalRequest._retry = true;
                     isRefreshing = true;
-                    console.log('interceptors: refreshOauth2Token start');
+                    // console.log('interceptors: refreshOauth2Token start');
                     await this.refreshOauth2Token();
-                    console.log('interceptors: refreshOauth2Token end');
+                    // console.log('interceptors: refreshOauth2Token end');
                     isRefreshing = false;
                     refreshSubscribers.forEach((subscriber) =>
                         subscriber(this.oauth2Token!.access_token)
@@ -273,7 +273,7 @@ export class HttpClient {
                 // current I don't know where to update it
                 // See:  https://github.com/matin/garth/issues/19
                 throw new Error(
-                    "login failed (Update Phone number), please update your phone number, currently I don't know where to update it"
+                    'login failed (Update Phone number), please update your phone number, See:  https://github.com/matin/garth/issues/19'
                 );
             }
         }

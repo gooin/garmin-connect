@@ -62,6 +62,9 @@ export class UrlClass {
     get IMPORT_DATA() {
         return `${this.GC_API}/modern/import-data`;
     }
+    get DAILY_STEPS() {
+        return `${this.GC_API}/usersummary-service/stats/steps/daily/`;
+    }
     WORKOUT(id?: GCWorkoutId) {
         if (id) {
             return `${this.GC_API}/workout-service/workout/${id}`;
@@ -70,5 +73,13 @@ export class UrlClass {
     }
     get WORKOUTS() {
         return `${this.GC_API}/workout-service/workouts`;
+    }
+    get SCHEDULE_WORKOUTS() {
+        return `${this.GC_API}/workout-service/schedule/`;
+    }
+
+    // Garmin use month 0-11, not real month.
+    CALENDAR(yaer: number, month: number) {
+        return `${this.GC_API}/calendar-service/year/${yaer}/month/${month}`;
     }
 }

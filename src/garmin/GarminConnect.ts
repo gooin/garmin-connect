@@ -3,8 +3,8 @@ import appRoot from 'app-root-path';
 import FormData from 'form-data';
 import _ from 'lodash';
 import { DateTime } from 'luxon';
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { HttpClient } from '../common/HttpClient';
 import { checkIsDirectory, createDirectory, writeToFile } from '../utils';
 import { UrlClass } from './UrlClass';
@@ -14,10 +14,13 @@ import {
     GCUserHash,
     GarminDomain,
     IActivity,
+    ICalendar,
     ICountActivities,
+    IDailyStepsType,
     IGarminTokens,
     IOauth1Token,
     IOauth2Token,
+    IScheduleWorkout,
     ISocialProfile,
     IUserSettings,
     IWorkout,
@@ -26,6 +29,7 @@ import {
     UploadFileTypeTypeValue
 } from './types';
 import Running from './workouts/Running';
+import { toDateString } from './common/DateUtils';
 
 let config: GCCredentials | undefined = undefined;
 
@@ -269,6 +273,10 @@ export default class GarminConnect {
                 );
             }
         }
+        if (!(workout as IWorkoutDetail).workoutSegments)
+            throw new Error(
+                'Missing workoutSegments, please use WorkoutDetail, not Workout.'
+            );
 
         const newWorkout = _.omit(workout, [
             'workoutId',
@@ -299,5 +307,54 @@ export default class GarminConnect {
     async deleteWorkout(workout: { workoutId: string }) {
         if (!workout.workoutId) throw new Error('Missing workout');
         return this.client.delete(this.url.WORKOUT(workout.workoutId));
+    }
+
+    async scheduleWorkout(
+        workout: { workoutId: string },
+        date = new Date()
+    ): Promise<IScheduleWorkout> {
+        if (!workout.workoutId) throw new Error('Missing workoutId');
+        const formatedDate = DateTime.fromJSDate(date).toFormat('yyyy-MM-dd');
+        return this.client.post<IScheduleWorkout>(
+            `${this.url.SCHEDULE_WORKOUTS}${workout.workoutId}`,
+            {
+                date: formatedDate
+            }
+        );
+    }
+
+    // Garmin use month 0-11, not real month.
+    async getCalendar(
+        year = new Date().getFullYear(),
+        month = new Date().getMonth()
+    ): Promise<ICalendar> {
+        return this.client.get<ICalendar>(this.url.CALENDAR(year, month));
+    }
+
+    async getSteps(date = new Date()): Promise<number> {
+        const dateString = toDateString(date);
+
+        const days = await this.client.get<IDailyStepsType[]>(
+            `${this.url.DAILY_STEPS}${dateString}/${dateString}`
+        );
+        const dayStats = days.find(
+            ({ calendarDate }) => calendarDate === dateString
+        );
+
+        if (!dayStats) {
+            throw new Error("Can't find daily steps for this date.");
+        }
+
+        return dayStats.totalSteps;
+    }
+
+    async get<T>(url: string, data?: any) {
+        const response = await this.client.get(url, data);
+        return response as T;
+    }
+
+    async post<T>(url: string, data: any) {
+        const response = await this.client.post<T>(url, data, {});
+        return response as T;
     }
 }
