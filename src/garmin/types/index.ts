@@ -1,6 +1,7 @@
 export type GCUserProfileId = number;
 export type GCUserHash = string;
 export type GCWorkoutId = string;
+export type GCCourseId = number;
 export type GCBadgeId = number;
 export type GarminDomain = 'garmin.com' | 'garmin.cn';
 

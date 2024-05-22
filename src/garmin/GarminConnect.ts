@@ -1,11 +1,18 @@
 import FormData from 'form-data';
 import _ from 'lodash';
 import { DateTime } from 'luxon';
-import { promises as fs, createReadStream } from 'node:fs';
+import { createReadStream, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { HttpClient } from '../common/HttpClient';
 import { checkIsDirectory, createDirectory, writeToFile } from '../utils';
 import { UrlClass } from './UrlClass';
+import {
+    calculateTimeDifference,
+    getLocalTimestamp,
+    toDateString
+} from './common/DateUtils';
+import { convertMLToOunces, convertOuncesToML } from './common/HydrationUtils';
+import { gramsToPounds } from './common/WeightUtils';
 import {
     ExportFileTypeValue,
     GCUserHash,
@@ -24,21 +31,15 @@ import {
     UploadFileType,
     UploadFileTypeTypeValue
 } from './types';
-import Running from './workouts/Running';
-import {
-    calculateTimeDifference,
-    getLocalTimestamp,
-    toDateString
-} from './common/DateUtils';
-import { SleepData } from './types/sleep';
-import { gramsToPounds } from './common/WeightUtils';
-import { convertMLToOunces, convertOuncesToML } from './common/HydrationUtils';
 import {
     ActivitySubType,
     ActivityType,
     GCActivityId,
     IActivity
 } from './types/activity';
+import { ICourse, ICourseDetail, ICoursesForUser } from './types/course';
+import { SleepData } from './types/sleep';
+import Running from './workouts/Running';
 
 export type EventCallback<T> = (data: T) => void;
 
@@ -576,6 +577,77 @@ export default class GarminConnect {
             );
 
             return heartRate;
+        } catch (error: any) {
+            throw new Error(`Error in getHeartRate: ${error.message}`);
+        }
+    }
+
+    async getCourses(): Promise<ICourse[]> {
+        try {
+            const coursesForUser = await this.client.get<ICoursesForUser>(
+                `${this.url.COURSE_OWNER}`
+            );
+            const courses_favorite = await this.client.get<ICourse[]>(
+                `${this.url.COURSE_FAVORITE}`
+            );
+            const course = [
+                ...coursesForUser.coursesForUser,
+                ...courses_favorite
+            ];
+            const uniqCourse = _.uniqBy(course, 'courseId');
+            return uniqCourse;
+        } catch (error: any) {
+            throw new Error(`Error in getHeartRate: ${error.message}`);
+        }
+    }
+
+    async getCourse(course: { courseId: number }): Promise<ICourseDetail> {
+        try {
+            if (!course.courseId) {
+                throw new Error('Missing courseId');
+            }
+
+            const courseDetail = await this.client.get<ICourseDetail>(
+                `${this.url.COURSE(course.courseId)}`
+            );
+            return courseDetail;
+        } catch (error: any) {
+            throw new Error(`Error in getHeartRate: ${error.message}`);
+        }
+    }
+
+    async createCourse(course: ICourseDetail): Promise<ICourseDetail> {
+        try {
+            const createdCourse = await this.client.post<ICourseDetail>(
+                `${this.url.COURSE()}`,
+                _.omit(course, [
+                    'courseId',
+                    // 'description',
+                    'matchedToSegments',
+                    'userProfilePk',
+                    'userGroupPk',
+                    'firstName',
+                    'lastName',
+                    'displayName',
+                    'geoRoutePk',
+                    'sourcePk',
+                    'hasShareableEvent',
+                    'virtualPartnerId',
+                    'includeLaps',
+                    'speedMeterPerSecond',
+                    'createDate',
+                    'updateDate',
+                    'targetCoordinateSystem',
+                    'originalCoordinateSystem',
+                    'consumer',
+                    'elevationSource',
+                    'hasPaceBand',
+                    'hasPowerGuide',
+                    'favorite',
+                    'curatedCoursePk'
+                ])
+            );
+            return createdCourse;
         } catch (error: any) {
             throw new Error(`Error in getHeartRate: ${error.message}`);
         }

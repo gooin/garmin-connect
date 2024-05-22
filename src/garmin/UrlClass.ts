@@ -1,4 +1,4 @@
-import { GCWorkoutId, GarminDomain } from './types';
+import { GCCourseId, GCWorkoutId, GarminDomain } from './types';
 
 export class UrlClass {
     private domain: GarminDomain;
@@ -108,5 +108,18 @@ export class UrlClass {
     // Garmin use month 0-11, not real month.
     CALENDAR(yaer: number, month: number) {
         return `${this.GC_API}/calendar-service/year/${yaer}/month/${month}`;
+    }
+    COURSE(id?: GCCourseId) {
+        if (id) {
+            return `${this.GC_API}/course-service/course/${id}`;
+        }
+        return `${this.GC_API}/course-service/course`;
+    }
+
+    get COURSE_FAVORITE() {
+        return `${this.GC_API}/course-service/course/favorites`;
+    }
+    get COURSE_OWNER() {
+        return `${this.GC_API}/web-gateway/course/owner/`;
     }
 }
