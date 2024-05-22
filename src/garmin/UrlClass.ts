@@ -59,6 +59,9 @@ export class UrlClass {
     get UPLOAD() {
         return `${this.GC_API}/upload-service/upload/`;
     }
+    get DOWNLOAD_WELLNESS() {
+        return `${this.GC_API}/download-service/files/wellness/`;
+    }
     get IMPORT_DATA() {
         return `${this.GC_API}/modern/import-data`;
     }

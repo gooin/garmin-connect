@@ -1,9 +1,7 @@
-import appRoot from 'app-root-path';
-
 import FormData from 'form-data';
 import _ from 'lodash';
 import { DateTime } from 'luxon';
-import fs from 'node:fs';
+import { promises as fs, createReadStream } from 'node:fs';
 import path from 'node:path';
 import { HttpClient } from '../common/HttpClient';
 import { checkIsDirectory, createDirectory, writeToFile } from '../utils';
@@ -42,14 +40,6 @@ import {
     IActivity
 } from './types/activity';
 
-let config: GCCredentials | undefined = undefined;
-
-try {
-    config = appRoot.require('/garmin.config.json');
-} catch (e) {
-    // Do nothing
-}
-
 export type EventCallback<T> = (data: T) => void;
 
 export interface GCCredentials {
@@ -74,7 +64,7 @@ export default class GarminConnect {
     private url: UrlClass;
     // private oauth1: OAuth;
     constructor(
-        credentials: GCCredentials | undefined = config,
+        credentials: GCCredentials,
         domain: GarminDomain = 'garmin.com'
     ) {
         if (!credentials) {
@@ -98,39 +88,49 @@ export default class GarminConnect {
         );
         return this;
     }
-    exportTokenToFile(dirPath: string): void {
-        if (!checkIsDirectory(dirPath)) {
-            createDirectory(dirPath);
+    async exportTokenToFile(dirPath: string): Promise<void> {
+        const isDir = await checkIsDirectory(dirPath);
+        if (!isDir) {
+            await createDirectory(dirPath);
         }
         // save oauth1 to json
         if (this.client.oauth1Token) {
-            writeToFile(
+            await writeToFile(
                 path.join(dirPath, 'oauth1_token.json'),
                 JSON.stringify(this.client.oauth1Token)
             );
         }
         if (this.client.oauth2Token) {
-            writeToFile(
+            await writeToFile(
                 path.join(dirPath, 'oauth2_token.json'),
                 JSON.stringify(this.client.oauth2Token)
             );
         }
     }
-    loadTokenByFile(dirPath: string): void {
-        if (!checkIsDirectory(dirPath)) {
+    async loadTokenByFile(dirPath: string): Promise<void> {
+        const isDir = await checkIsDirectory(dirPath);
+        if (!isDir) {
             throw new Error('loadTokenByFile: Directory not found: ' + dirPath);
         }
-        let oauth1Data = fs.readFileSync(
-            path.join(dirPath, 'oauth1_token.json')
-        ) as unknown as string;
+        let oauth1Data = await fs.readFile(
+            path.join(dirPath, 'oauth1_token.json'),
+            'utf-8'
+        );
+        // console.log('loadTokenByFile - oauth1Data:', oauth1Data);
         const oauth1 = JSON.parse(oauth1Data);
+        // console.log('loadTokenByFile - oauth1:', oauth1);
         this.client.oauth1Token = oauth1;
 
-        let oauth2Data = fs.readFileSync(
-            path.join(dirPath, 'oauth2_token.json')
-        ) as unknown as string;
+        let oauth2Data = await fs.readFile(
+            path.join(dirPath, 'oauth2_token.json'),
+            'utf-8'
+        );
+        // console.log('loadTokenByFile - oauth2Data:', oauth2Data);
         const oauth2 = JSON.parse(oauth2Data);
+        // console.log('loadTokenByFile - oauth2:', oauth2);
         this.client.oauth2Token = oauth2;
+        // console.log('loadTokenByFile - oauth2Token:', this);
+        // console.log('loadTokenByFile - oauth2Token:', this.client.oauth2Token);
     }
     exportToken(): IGarminTokens {
         if (!this.client.oauth1Token || !this.client.oauth2Token) {
@@ -186,14 +186,30 @@ export default class GarminConnect {
         });
     }
 
+    async downloadWellnessData(date: Date, dir: string) {
+        const dateStr = toDateString(date);
+        const isDir = await checkIsDirectory(dir);
+        if (!isDir) {
+            await createDirectory(dir);
+        }
+        let fileBuffer = await this.client.get<Buffer>(
+            this.url.DOWNLOAD_WELLNESS + dateStr,
+            {
+                responseType: 'arraybuffer'
+            }
+        );
+        await writeToFile(path.join(dir, `${dateStr}.zip`), fileBuffer);
+    }
+
     async downloadOriginalActivityData(
         activity: { activityId: GCActivityId },
         dir: string,
         type: ExportFileTypeValue = 'zip'
     ): Promise<void> {
         if (!activity.activityId) throw new Error('Missing activityId');
-        if (!checkIsDirectory(dir)) {
-            createDirectory(dir);
+        const isDir = await checkIsDirectory(dir);
+        if (!isDir) {
+            await createDirectory(dir);
         }
         let fileBuffer: Buffer;
         if (type === 'tcx') {
@@ -220,7 +236,7 @@ export default class GarminConnect {
                 'downloadOriginalActivityData - Invalid type: ' + type
             );
         }
-        writeToFile(
+        await writeToFile(
             path.join(dir, `${activity.activityId}.${type}`),
             fileBuffer
         );
@@ -235,7 +251,9 @@ export default class GarminConnect {
             throw new Error('uploadActivity - Invalid format: ' + format);
         }
 
-        const fileBuffer = fs.createReadStream(file);
+        // const fh = await fs.open(file);
+        const fileBuffer = createReadStream(file);
+        // console.log('fileBuffer:', fileBuffer);
         const form = new FormData();
         form.append('userfile', fileBuffer);
         const response = await this.client.post(
