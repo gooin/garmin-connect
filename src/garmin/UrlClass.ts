@@ -122,4 +122,8 @@ export class UrlClass {
     get COURSE_OWNER() {
         return `${this.GC_API}/web-gateway/course/owner/`;
     }
+
+    get CONSENT_GRANT() {
+        return `${this.GC_API}/gdprconsent-service/consent/grant`;
+    }
 }

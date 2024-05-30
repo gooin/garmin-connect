@@ -653,6 +653,22 @@ export default class GarminConnect {
         }
     }
 
+    async consenGrant(): Promise<void> {
+        try {
+            const result = await this.client.post<void>(
+                `${this.url.CONSENT_GRANT}`,
+                {
+                    consentTypeId: 'DI_CONNECT_UPLOAD',
+                    consentLocale: 'en-US',
+                    consentVersion: '59'
+                }
+            );
+            return result;
+        } catch (error: any) {
+            throw new Error(`Error in consenGrant: ${error.message}`);
+        }
+    }
+
     async get<T>(url: string, data?: any) {
         const response = await this.client.get(url, data);
         return response as T;
