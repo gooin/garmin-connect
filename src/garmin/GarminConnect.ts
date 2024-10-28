@@ -59,10 +59,12 @@ export interface Session {}
 
 export default class GarminConnect {
     client: HttpClient;
+    domain: GarminDomain;
     private _userHash: GCUserHash | undefined;
     private credentials: GCCredentials;
     private listeners: Listeners;
     private url: UrlClass;
+
     // private oauth1: OAuth;
     constructor(
         credentials: GCCredentials,
@@ -73,6 +75,7 @@ export default class GarminConnect {
         }
         this.credentials = credentials;
         this.url = new UrlClass(domain);
+        this.domain = domain;
         this.client = new HttpClient(this.url);
         this._userHash = undefined;
         this.listeners = {};
