@@ -29,9 +29,18 @@ const USER_AGENT_BROWSER =
 
 const OAUTH_CONSUMER_URL =
     'https://thegarth.s3.amazonaws.com/oauth_consumer.json';
-//  refresh token
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+
+interface RefreshSubscriber {
+    resolve: (token: string) => void;
+    reject: (error: any) => void;
+}
+
+const HTTP_STATUS = {
+    UNAUTHORIZED: 401
+} as const;
+
+let tokenRefreshPromise: Promise<void> | null = null;
+let refreshSubscribers: RefreshSubscriber[] = [];
 
 export class HttpClient {
     client: AxiosInstance;
@@ -47,49 +56,40 @@ export class HttpClient {
             (response) => response,
             async (error) => {
                 const originalRequest = error.config;
-                // console.log('originalRequest:', originalRequest)
-                // Auto Refresh token
+
                 if (
-                    error?.response?.status === 401 &&
+                    error?.response?.status === HTTP_STATUS.UNAUTHORIZED &&
                     !originalRequest?._retry
                 ) {
                     if (!this.oauth2Token) {
-                        return;
-                    }
-                    if (isRefreshing) {
-                        try {
-                            const token = await new Promise<string>(
-                                (resolve) => {
-                                    refreshSubscribers.push((token) => {
-                                        resolve(token);
-                                    });
-                                }
-                            );
-                            originalRequest.headers.Authorization = `Bearer ${token}`;
-                            return this.client(originalRequest);
-                        } catch (err) {
-                            console.log('err:', err);
-                            return Promise.reject(err);
-                        }
+                        throw new Error('No OAuth2 token available');
                     }
 
                     originalRequest._retry = true;
-                    isRefreshing = true;
-                    // console.log('interceptors: refreshOauth2Token start');
-                    await this.refreshOauth2Token();
-                    // console.log('interceptors: refreshOauth2Token end');
-                    isRefreshing = false;
-                    refreshSubscribers.forEach((subscriber) =>
-                        subscriber(this.oauth2Token!.access_token)
-                    );
-                    refreshSubscribers = [];
-                    originalRequest.headers.Authorization = `Bearer ${
-                        this.oauth2Token!.access_token
-                    }`;
-                    return this.client(originalRequest);
+
+                    try {
+                        if (!tokenRefreshPromise) {
+                            tokenRefreshPromise =
+                                this.refreshOauth2Token().finally(() => {
+                                    tokenRefreshPromise = null;
+                                });
+                        }
+
+                        await tokenRefreshPromise;
+
+                        originalRequest.headers.Authorization = `Bearer ${this.oauth2Token.access_token}`;
+                        return this.client(originalRequest);
+                    } catch (err) {
+                        console.error('Token refresh failed:', err);
+                        throw err;
+                    }
                 }
-                if (axios.isAxiosError(error)) {
-                    if (error?.response) this.handleError(error?.response);
+
+                if (axios.isAxiosError(error) && error.response) {
+                    this.handleError(error.response);
+                } else {
+                    // 处理没有response的情况
+                    throw new Error('Network error or unknown error occurred');
                 }
                 throw error;
             }
@@ -166,11 +166,14 @@ export class HttpClient {
 
     handleHttpError(response: AxiosResponse): void {
         const { status, statusText, data } = response;
-        const msg = `ERROR: (${status}), ${statusText}, ${JSON.stringify(
-            data
-        )}`;
-        console.error(msg);
-        throw new Error(msg);
+        const errorMessage = {
+            status,
+            statusText,
+            data: typeof data === 'object' ? JSON.stringify(data) : data
+        };
+
+        console.error('HTTP Error:', errorMessage);
+        throw new Error(`HTTP Error (${status}): ${statusText}`);
     }
 
     /**
@@ -300,18 +303,26 @@ export class HttpClient {
     }
 
     async refreshOauth2Token() {
-        if (!this.OAUTH_CONSUMER) {
-            await this.fetchOauthConsumer();
+        try {
+            if (!this.OAUTH_CONSUMER) {
+                await this.fetchOauthConsumer();
+            }
+
+            if (!this.oauth2Token || !this.oauth1Token) {
+                throw new Error('Missing required tokens for refresh');
+            }
+
+            const oauth1 = {
+                oauth: this.getOauthClient(this.OAUTH_CONSUMER!),
+                token: this.oauth1Token
+            };
+
+            await this.exchange(oauth1);
+            console.log('OAuth2 token refreshed successfully');
+        } catch (error) {
+            console.error('Failed to refresh OAuth2 token:', error);
+            throw error;
         }
-        if (!this.oauth2Token || !this.oauth1Token) {
-            throw new Error('No Oauth2Token or Oauth1Token');
-        }
-        const oauth1 = {
-            oauth: this.getOauthClient(this.OAUTH_CONSUMER!),
-            token: this.oauth1Token
-        };
-        await this.exchange(oauth1);
-        console.log('Oauth2 token refreshed!');
     }
 
     async getOauth1Token(ticket: string): Promise<IOauth1> {
@@ -394,17 +405,18 @@ export class HttpClient {
     }
 
     setOauth2TokenExpiresAt(token: IOauth2Token): IOauth2Token {
-        // human readable date
-        token['last_update_date'] = DateTime.now().toLocal().toString();
-        token['expires_date'] = DateTime.fromSeconds(
-            DateTime.now().toSeconds() + token['expires_in']
-        )
-            .toLocal()
-            .toString();
-        // timestamp for check expired
-        token['expires_at'] = DateTime.now().toSeconds() + token['expires_in'];
-        token['refresh_token_expires_at'] =
-            DateTime.now().toSeconds() + token['refresh_token_expires_in'];
-        return token;
+        const now = DateTime.now();
+        const expiresAt = now.plus({ seconds: token.expires_in });
+        const refreshTokenExpiresAt = now.plus({
+            seconds: token.refresh_token_expires_in
+        });
+
+        return {
+            ...token,
+            last_update_date: now.toLocal().toString(),
+            expires_date: expiresAt.toLocal().toString(),
+            expires_at: expiresAt.toSeconds(),
+            refresh_token_expires_at: refreshTokenExpiresAt.toSeconds()
+        };
     }
 }
