@@ -51,10 +51,20 @@ export class HttpClient {
 
     constructor(url: UrlClass) {
         this.url = url;
-        this.client = axios.create();
+        this.client = axios.create({
+            timeout: 5000,
+            timeoutErrorMessage: 'Request Timeout: >5s'
+        });
         this.client.interceptors.response.use(
             (response) => response,
             async (error) => {
+                if (
+                    axios.isAxiosError(error) &&
+                    error.code === 'ECONNABORTED'
+                ) {
+                    throw new Error(error.message || 'Request Timeout');
+                }
+
                 const originalRequest = error.config;
 
                 if (
