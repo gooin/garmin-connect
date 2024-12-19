@@ -29,7 +29,9 @@ import {
     IWorkout,
     IWorkoutDetail,
     UploadFileType,
-    UploadFileTypeTypeValue
+    UploadFileTypeTypeValue,
+    GCConfig,
+    Listeners
 } from './types';
 import {
     ActivitySubType,
@@ -41,55 +43,37 @@ import { ICourse, ICourseDetail, ICoursesForUser } from './types/course';
 import { SleepData } from './types/sleep';
 import Running from './workouts/Running';
 
-export type EventCallback<T> = (data: T) => void;
-
-export interface GCCredentials {
-    username: string;
-    password: string;
-}
-export interface Listeners {
-    [event: string]: EventCallback<any>[];
-}
-
-export enum Event {
-    sessionChange = 'sessionChange'
-}
-
 export interface Session {}
 
 export default class GarminConnect {
     client: HttpClient;
     domain: GarminDomain;
+    config: GCConfig;
     private _userHash: GCUserHash | undefined;
-    private credentials: GCCredentials;
     private listeners: Listeners;
     private url: UrlClass;
 
     // private oauth1: OAuth;
-    constructor(
-        credentials: GCCredentials,
-        domain: GarminDomain = 'garmin.com'
-    ) {
-        if (!credentials) {
+    constructor(config: GCConfig, domain: GarminDomain = 'garmin.com') {
+        const { username, password } = config;
+        if (!username || !password) {
             throw new Error('Missing credentials');
         }
-        this.credentials = credentials;
-        this.url = new UrlClass(domain);
-        this.domain = domain;
-        this.client = new HttpClient(this.url);
+        this.config = config;
+        this.url = new UrlClass(config?.domain ?? domain);
+        this.domain = config?.domain ?? domain;
         this._userHash = undefined;
         this.listeners = {};
+
+        this.client = new HttpClient(this.url, config);
     }
 
     async login(username?: string, password?: string): Promise<GarminConnect> {
         if (username && password) {
-            this.credentials.username = username;
-            this.credentials.password = password;
+            this.config.username = username;
+            this.config.password = password;
         }
-        await this.client.login(
-            this.credentials.username,
-            this.credentials.password
-        );
+        await this.client.login(this.config.username, this.config.password);
         return this;
     }
     async exportTokenToFile(dirPath: string): Promise<void> {
@@ -257,7 +241,7 @@ export default class GarminConnect {
 
         // const fh = await fs.open(file);
         const fileBuffer = createReadStream(file);
-        // console.log('fileBuffer:', fileBuffer);
+        console.log('fileBuffer:', fileBuffer);
         const form = new FormData();
         form.append('userfile', fileBuffer);
         const response = await this.client.post(

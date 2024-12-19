@@ -6,6 +6,28 @@ export type GCBadgeId = number;
 export type GarminDomain = 'garmin.com' | 'garmin.cn';
 export * from './activity';
 
+export type GCConfig = GCCredentials & GCHttpClientConfig;
+
+export type GCCredentials = {
+    username: string;
+    password: string;
+};
+
+export type GCHttpClientConfig = {
+    timeout?: number;
+    domain?: GarminDomain;
+};
+
+export type EventCallback<T> = (data: T) => void;
+
+export interface Listeners {
+    [event: string]: EventCallback<any>[];
+}
+
+export enum Event {
+    sessionChange = 'sessionChange'
+}
+
 export enum ExportFileType {
     tcx = 'tcx',
     gpx = 'gpx',

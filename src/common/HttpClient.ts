@@ -11,6 +11,7 @@ import OAuth from 'oauth-1.0a';
 import qs from 'qs';
 import { UrlClass } from '../garmin/UrlClass';
 import {
+    GCConfig,
     IOauth1,
     IOauth1Consumer,
     IOauth1Token,
@@ -26,7 +27,8 @@ const PAGE_TITLE_RE = new RegExp('<title>([^<]*)</title>');
 const USER_AGENT_CONNECTMOBILE = 'com.garmin.android.apps.connectmobile';
 const USER_AGENT_BROWSER =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36';
-
+const USER_AGENT_BROWSER_MAC =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 const OAUTH_CONSUMER_URL =
     'https://thegarth.s3.amazonaws.com/oauth_consumer.json';
 
@@ -45,16 +47,33 @@ let refreshSubscribers: RefreshSubscriber[] = [];
 export class HttpClient {
     client: AxiosInstance;
     url: UrlClass;
+    config: GCConfig;
     oauth1Token: IOauth1Token | undefined;
     oauth2Token: IOauth2Token | undefined;
     OAUTH_CONSUMER: IOauth1Consumer | undefined;
 
-    constructor(url: UrlClass) {
+    constructor(url: UrlClass, config: GCConfig) {
         this.url = url;
         this.client = axios.create({
-            timeout: 5000,
-            timeoutErrorMessage: 'Request Timeout: >5s'
+            timeout: config?.timeout ?? 5000,
+            timeoutErrorMessage: `Request Timeout: > ${
+                config?.timeout ?? 5000
+            } ms`
+
+            /**
+             * Charles debugger: uncomment `proxy` and `httpsAgent`, then run bellow command.
+             * NODE_TLS_REJECT_UNAUTHORIZED=0  node test/sync.js
+             */
+            // proxy: {
+            //     host: '127.0.0.1',
+            //     port: 8888,
+            //     protocol: 'http'
+            // },
+            // httpsAgent: new (require('https').Agent)({
+            //     rejectUnauthorized: false
+            // })
         });
+        this.config = config;
         this.client.interceptors.response.use(
             (response) => response,
             async (error) => {
@@ -328,7 +347,9 @@ export class HttpClient {
             };
 
             await this.exchange(oauth1);
-            console.log('OAuth2 token refreshed successfully');
+            console.log(
+                `「${this.config.username}」in「${this.url.domain}」 OAuth2 token refreshed successfully`
+            );
         } catch (error) {
             console.error('Failed to refresh OAuth2 token:', error);
             throw error;

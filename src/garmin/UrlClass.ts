@@ -1,7 +1,7 @@
 import { GCCourseId, GCWorkoutId, GarminDomain } from './types';
 
 export class UrlClass {
-    private domain: GarminDomain;
+    domain: GarminDomain;
     GC_MODERN: string;
     GARMIN_SSO_ORIGIN: string;
     GC_API: string;
