@@ -241,7 +241,7 @@ export default class GarminConnect {
 
         // const fh = await fs.open(file);
         const fileBuffer = createReadStream(file);
-        console.log('fileBuffer:', fileBuffer);
+        // console.log('fileBuffer:', fileBuffer);
         const form = new FormData();
         form.append('userfile', fileBuffer);
         const response = await this.client.post(
@@ -253,6 +253,7 @@ export default class GarminConnect {
                 }
             }
         );
+        fileBuffer.close();
         return response;
     }
 
